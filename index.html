@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>OVERLOAD — Progresión sin estancamiento</title>
+  <meta name="description" content="Tracker de fuerza personal enfocado en sobrecarga progresiva: sugerencias inteligentes, detección de mesetas y PRs." />
+  <meta name="theme-color" content="#0b1526" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="icon.svg" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;900&family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body data-palette="#189ec2,#c67d1d,#d84f86,#63ab35">
+
+  <!-- Fondo aurora -->
+  <div class="aurora" aria-hidden="true">
+    <div class="blob blob-a"></div>
+    <div class="blob blob-b"></div>
+    <div class="blob blob-c"></div>
+    <div class="grain"></div>
+  </div>
+
+  <div class="shell">
+    <header class="topbar">
+      <div class="brand">
+        <svg class="brand-mark" viewBox="0 0 48 48" aria-hidden="true">
+          <defs>
+            <linearGradient id="bg1" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#41e6ff"/><stop offset="1" stop-color="#ff6ab8"/>
+            </linearGradient>
+          </defs>
+          <rect x="4" y="21" width="40" height="6" rx="3" fill="url(#bg1)"/>
+          <rect x="7" y="12" width="7" height="24" rx="3.5" fill="url(#bg1)"/>
+          <rect x="34" y="12" width="7" height="24" rx="3.5" fill="url(#bg1)"/>
+          <rect x="1" y="17" width="4" height="14" rx="2" fill="url(#bg1)" opacity=".7"/>
+          <rect x="43" y="17" width="4" height="14" rx="2" fill="url(#bg1)" opacity=".7"/>
+        </svg>
+        <div class="brand-text">
+          <span class="brand-name">OVERLOAD</span>
+          <span class="brand-tag">progresión sin estancamiento</span>
+        </div>
+      </div>
+      <button class="icon-btn" id="btn-settings" aria-label="Ajustes">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+    </header>
+
+    <main id="view" class="view" tabindex="-1"></main>
+
+    <!-- Píldora de descanso flotante -->
+    <div id="rest-pill" class="rest-pill hidden" role="timer" aria-live="polite">
+      <svg class="rest-ring" viewBox="0 0 44 44">
+        <circle class="ring-bg" cx="22" cy="22" r="19"/>
+        <circle class="ring-fg" cx="22" cy="22" r="19"/>
+      </svg>
+      <div class="rest-info">
+        <span class="rest-label">Descanso</span>
+        <span class="rest-time" id="rest-time">1:30</span>
+      </div>
+      <div class="rest-actions">
+        <button id="rest-minus" aria-label="Restar 15 segundos">−15</button>
+        <button id="rest-plus" aria-label="Sumar 15 segundos">+15</button>
+        <button id="rest-skip" aria-label="Saltar descanso">✕</button>
+      </div>
+    </div>
+
+    <nav class="tabbar" aria-label="Navegación principal">
+      <button class="tab active" data-nav="home" aria-label="Inicio">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>
+        <span>Inicio</span>
+      </button>
+      <button class="tab" data-nav="progress" aria-label="Progreso">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>
+        <span>Progreso</span>
+      </button>
+      <button class="tab tab-fab" id="btn-train" aria-label="Entrenar">
+        <span class="fab-inner">
+          <svg viewBox="0 0 48 48" aria-hidden="true"><rect x="6" y="21" width="36" height="6" rx="3" fill="currentColor"/><rect x="9" y="13" width="6" height="22" rx="3" fill="currentColor"/><rect x="33" y="13" width="6" height="22" rx="3" fill="currentColor"/></svg>
+        </span>
+        <span class="fab-label">Entrenar</span>
+      </button>
+      <button class="tab" data-nav="history" aria-label="Historial">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>
+        <span>Historial</span>
+      </button>
+      <button class="tab" data-nav="routines" aria-label="Rutinas">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/><circle cx="19" cy="18" r="2.4"/></svg>
+        <span>Rutinas</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- Overlay de entrenamiento activo -->
+  <div id="workout" class="workout hidden" role="dialog" aria-modal="true" aria-label="Entrenamiento activo"></div>
+
+  <!-- Modales -->
+  <div id="modal-root"></div>
+
+  <!-- Celebración de PRs -->
+  <div id="celebrate" class="celebrate hidden" aria-hidden="true"></div>
+
+  <div id="toast" class="toast hidden" role="status"></div>
+
+  <script type="module" src="app.js"></script>
+  <script>
+    // El SW da soporte offline; se omite en localhost para no cachear durante desarrollo.
+    const isLocal = ['localhost', '127.0.0.1'].includes(location.hostname);
+    if ('serviceWorker' in navigator && location.protocol === 'https:' && !isLocal) {
+      addEventListener('load', () => navigator.serviceWorker.register('sw.js'));
+    }
+  </script>
+</body>
+</html>
