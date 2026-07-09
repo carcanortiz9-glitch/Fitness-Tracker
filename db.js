@@ -107,6 +107,43 @@ export const SEED_EXERCISES = [
   E('ex-crunch-polea', 'Crunch en polea', 'core', 60, 2.5, 10, 15),
   E('ex-elev-piernas', 'Elevación de piernas', 'core', 60, 0, 10, 20),
   E('ex-plancha', 'Plancha (segundos)', 'core', 60, 0, 30, 60),
+
+  // --- Básicos con mancuernas / barra / banco / polea (sin máquinas raras) ---
+  // Pecho
+  E('ex-press-mancuernas', 'Press plano con mancuernas', 'pecho', 120),
+  E('ex-aperturas-manc', 'Aperturas con mancuernas', 'pecho', 90, 1.25, 10, 15),
+  E('ex-lagartijas', 'Lagartijas (push-ups)', 'pecho', 75, 0, 10, 20),
+  // Espalda
+  E('ex-remo-mancuerna', 'Remo con mancuerna a una mano', 'espalda', 90),
+  E('ex-pullover', 'Pull-over con mancuerna', 'espalda', 90),
+  E('ex-jalon-cerrado', 'Jalón agarre cerrado', 'espalda', 120),
+  E('ex-encogimientos', 'Encogimientos de trapecio', 'espalda', 75, 2.5, 10, 15),
+  E('ex-hiperextensiones', 'Hiperextensiones lumbares', 'espalda', 75, 0, 10, 15),
+  // Pierna
+  E('ex-goblet', 'Sentadilla goblet', 'pierna', 120),
+  E('ex-rumano', 'Peso muerto rumano', 'pierna', 150, 2.5, 8, 12),
+  E('ex-bulgara', 'Sentadilla búlgara', 'pierna', 120, 2.5, 8, 12),
+  E('ex-hip-thrust', 'Hip thrust / puente de glúteo', 'pierna', 120, 5),
+  E('ex-step-ups', 'Step-ups al banco', 'pierna', 90),
+  E('ex-sumo-manc', 'Sentadilla sumo con mancuerna', 'pierna', 120),
+  // Hombros
+  E('ex-press-manc-sentado', 'Press de hombros con mancuernas', 'hombros', 120),
+  E('ex-arnold', 'Press Arnold', 'hombros', 120),
+  E('ex-frontales', 'Elevaciones frontales', 'hombros', 75, 1.25, 10, 15),
+  E('ex-face-pull', 'Face pull en polea', 'hombros', 75, 1.25, 12, 15),
+  E('ex-remo-menton', 'Remo al mentón', 'hombros', 90, 1.25, 10, 15),
+  // Bíceps
+  E('ex-curl-alterno', 'Curl alterno con mancuernas', 'biceps'),
+  E('ex-curl-concentrado', 'Curl concentrado', 'biceps', 75, 1.25, 10, 15),
+  E('ex-curl-polea', 'Curl en polea baja', 'biceps'),
+  // Tríceps
+  E('ex-triceps-cabeza', 'Extensión sobre cabeza con mancuerna', 'triceps'),
+  E('ex-patada-triceps', 'Patada de tríceps', 'triceps', 75, 1.25, 10, 15),
+  // Core
+  E('ex-crunch', 'Crunch abdominal', 'core', 60, 0, 12, 20),
+  E('ex-giro-ruso', 'Giro ruso (russian twist)', 'core', 60, 2.5, 12, 20),
+  E('ex-plancha-lateral', 'Plancha lateral (segundos)', 'core', 60, 0, 20, 45),
+  E('ex-rodillas-colgado', 'Elevación de rodillas colgado', 'core', 75, 0, 8, 15),
 ];
 
 export const SEED_ROUTINES = [
@@ -155,6 +192,15 @@ export async function loadAll() {
     ]);
     exercises = SEED_EXERCISES.slice();
     routines = SEED_ROUTINES.slice();
+  } else {
+    // Dispositivos ya sembrados: incorporar ejercicios semilla nuevos
+    // agregados en actualizaciones, sin tocar los existentes ni los custom.
+    const have = new Set(exercises.map((e) => e.id));
+    const missing = SEED_EXERCISES.filter((e) => !have.has(e.id));
+    if (missing.length) {
+      await Promise.all(missing.map((e) => db.put('exercises', e)));
+      exercises = exercises.concat(missing);
+    }
   }
   sessions.sort((a, b) => a.date.localeCompare(b.date));
   return {

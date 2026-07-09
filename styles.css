@@ -273,12 +273,16 @@ input, select { font-family: inherit; color: inherit; }
 .fab-label { font-size: 10.5px; font-weight: 800; color: var(--ink-2); letter-spacing: .04em; }
 
 /* ---------- Overlay de entrenamiento ---------- */
+/* OJO: .workout nunca debe animar transform — en Safari iOS eso rompe el
+   position:fixed de la barra de terminar. La entrada se anima en .wk-shell. */
 .workout { position: fixed; inset: 0; z-index: 60; overflow-y: auto; overscroll-behavior: contain;
   background: radial-gradient(130% 90% at 50% 0%, #122540 0%, var(--bg) 48%, var(--bg-deep) 100%);
-  animation: wk-in .38s cubic-bezier(.2,.75,.2,1) both; }
-@keyframes wk-in { from { opacity: 0; transform: translateY(6%); } to { opacity: 1; transform: none; } }
-.workout.closing { animation: wk-out .3s ease both; }
-@keyframes wk-out { to { opacity: 0; transform: translateY(6%); } }
+  animation: wk-fade .32s ease both; }
+@keyframes wk-fade { from { opacity: 0; } }
+.workout .wk-shell { animation: wk-in .38s cubic-bezier(.2,.75,.2,1) both; }
+@keyframes wk-in { from { opacity: 0; transform: translateY(26px); } to { opacity: 1; transform: none; } }
+.workout.closing { animation: wk-fade-out .28s ease both; }
+@keyframes wk-fade-out { to { opacity: 0; } }
 
 .wk-shell { max-width: 640px; margin: 0 auto; padding: 14px 18px 140px; }
 .wk-top { display: flex; align-items: center; justify-content: space-between; gap: 12px;

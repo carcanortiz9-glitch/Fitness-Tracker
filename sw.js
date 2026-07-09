@@ -1,4 +1,4 @@
-const CACHE = 'overload-v2';
+const CACHE = 'overload-v4';
 const SHELL = [
   './',
   './index.html',
@@ -9,7 +9,9 @@ const SHELL = [
   './charts.js',
   './manifest.webmanifest',
   './icon.svg',
-  './icon-maskable.svg',
+  './icon-192.png',
+  './icon-512.png',
+  './icon-maskable-512.png',
 ];
 
 self.addEventListener('install', (e) => {
