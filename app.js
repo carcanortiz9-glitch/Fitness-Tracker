@@ -20,6 +20,10 @@ const state = { exercises: [], routines: [], sessions: [], settings: {}, active:
 let currentView = 'home';
 
 const exById = (id) => state.exercises.find((e) => e.id === id);
+
+// Búsqueda de video de técnica en YouTube (demostraciones reales verificadas)
+const ytUrl = (name) => 'https://www.youtube.com/results?search_query=' +
+  encodeURIComponent('técnica ' + name.replace(/\s*\(.*?\)/g, '').replace(/\s*\/.*$/, '') + ' ejercicio');
 const CHECK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.5l5 5 10-11"/></svg>';
 
 // ============================== ARRANQUE ==============================
@@ -386,7 +390,10 @@ function exCardHTML(en, ei) {
           <div class="ex-name">${esc(en.name)}</div>
           <span class="ex-muscle">${MUSCLES[en.muscle]?.name || en.muscle}</span>
         </div>
-        <button class="ex-menu" data-rm-ex="${ei}" aria-label="Quitar ejercicio">✕</button>
+        <span class="ex-actions">
+          <button class="ex-menu yt" data-yt="${esc(en.name)}" aria-label="Ver técnica en video">▶</button>
+          <button class="ex-menu" data-rm-ex="${ei}" aria-label="Quitar ejercicio">✕</button>
+        </span>
       </div>
       ${plateau ? `
         <div class="suggest warn"><span class="s-ico">📉</span><span>
@@ -421,6 +428,8 @@ function bindWorkoutList() {
   });
 
   list.addEventListener('click', (e) => {
+    const yt = e.target.closest('[data-yt]');
+    if (yt) { window.open(ytUrl(yt.dataset.yt), '_blank', 'noopener'); return; }
     const rm = e.target.closest('[data-rm-ex]');
     if (rm) {
       const ei = +rm.dataset.rmEx;
@@ -1045,8 +1054,13 @@ function libraryModal() {
         <span class="ex-dot" style="background:${MUSCLES[e.muscle]?.color || '#888'}"></span>
         <span class="ex-pick-name">${esc(e.name)}</span>
         <span class="ex-pick-muscle">${best ? `e1RM ${fmtKg(best)} kg` : MUSCLES[e.muscle]?.name || ''}</span>
+        <span class="yt-mini" data-ytl="${esc(e.name)}" role="button" aria-label="Ver técnica en video">▶</span>
       </button>`;
     }).join('');
+    $$('.yt-mini', m).forEach((s) => s.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      window.open(ytUrl(s.dataset.ytl), '_blank', 'noopener');
+    }));
     $$('[data-lib]', m).forEach((b) => b.addEventListener('click', () => {
       closeModal();
       render('progress');

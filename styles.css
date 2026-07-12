@@ -367,8 +367,15 @@ input, select { font-family: inherit; color: inherit; }
 .ex-name { font-weight: 800; font-size: 15.5px; }
 .ex-muscle { display: inline-block; font-size: 10.5px; font-weight: 800; letter-spacing: .09em;
   text-transform: uppercase; color: var(--ink-3); margin-top: 4px; }
+.ex-actions { display: flex; gap: 7px; flex-shrink: 0; }
 .ex-menu { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center;
   color: var(--ink-3); background: rgba(255,255,255,.05); border: 1px solid transparent; font-size: 16px; }
+.ex-menu.yt { color: var(--cyan); border-color: rgba(65,230,255,.3); font-size: 11px; }
+.ex-menu.yt:active { transform: scale(.9); }
+.yt-mini { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; flex-shrink: 0;
+  font-size: 10px; color: var(--cyan); background: rgba(65,230,255,.09);
+  border: 1px solid rgba(65,230,255,.3); transition: transform .12s; }
+.yt-mini:active { transform: scale(.88); }
 
 .suggest { display: flex; gap: 9px; align-items: flex-start; margin-top: 12px; padding: 10px 13px;
   border-radius: 13px; font-size: 13px; line-height: 1.45; font-weight: 600;

@@ -1,4 +1,4 @@
-const CACHE = 'overload-v7';
+const CACHE = 'overload-v8';
 const SHELL = [
   './',
   './index.html',
