@@ -66,9 +66,15 @@ input, select { font-family: inherit; color: inherit; }
 ::selection { background: rgba(65,230,255,.35); }
 
 /* ---------- Fondo aurora ---------- */
+/* Fondo: arte aurora generado con IA (bg-aurora.jpg) bajo un velo oscuro
+   para legibilidad; los blobs animados le dan vida encima. Si la imagen
+   no carga, el degradado radial cubre solo. */
 .aurora { position: fixed; inset: 0; z-index: -1; background:
-  radial-gradient(120% 90% at 50% 0%, #12233f 0%, var(--bg) 45%, var(--bg-deep) 100%); overflow: hidden; }
-.blob { position: absolute; border-radius: 50%; filter: blur(70px); opacity: .5; will-change: transform; }
+  radial-gradient(120% 90% at 50% 0%, rgba(18,35,63,.6) 0%, rgba(11,21,38,.78) 45%, rgba(7,14,27,.9) 100%),
+  url("bg-aurora.jpg") center / cover no-repeat,
+  radial-gradient(120% 90% at 50% 0%, #12233f 0%, var(--bg) 45%, var(--bg-deep) 100%);
+  overflow: hidden; }
+.blob { position: absolute; border-radius: 50%; filter: blur(70px); opacity: .35; will-change: transform; }
 .blob-a { width: 62vmax; height: 44vmax; left: -18vmax; top: -14vmax;
   background: radial-gradient(closest-side, rgba(34,150,220,.55), transparent 70%);
   animation: drift-a 26s ease-in-out infinite alternate; }
@@ -162,6 +168,69 @@ input, select { font-family: inherit; color: inherit; }
 .routine-go { width: 40px; height: 40px; border-radius: 999px; display: grid; place-items: center; flex-shrink: 0;
   background: var(--grad-hero); color: #071019; box-shadow: 0 6px 20px -6px rgba(65,230,255,.55); }
 .routine-go svg { width: 18px; height: 18px; }
+
+/* ---------- Plan coach ---------- */
+.plan-card { display: block; width: 100%; text-align: left; }
+.plan-cta { display: flex; align-items: center; gap: 14px; }
+.plan-ico { width: 48px; height: 48px; border-radius: 15px; display: grid; place-items: center;
+  font-size: 23px; background: var(--glass-strong); border: 1px solid var(--stroke-bright); flex-shrink: 0; }
+.plan-info { flex: 1; min-width: 0; }
+.plan-title { display: block; font-family: var(--font-display); font-weight: 700; font-size: 14.5px; }
+.plan-sub { display: block; font-size: 12.5px; color: var(--ink-3); margin-top: 4px; line-height: 1.45; }
+.plan-head { display: flex; align-items: center; gap: 13px; }
+.plan-phase-chip { font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--cyan); background: rgba(65,230,255,.1); border: 1px solid rgba(65,230,255,.35);
+  padding: 5px 9px; border-radius: 999px; flex-shrink: 0; }
+.plan-goals { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 13px; }
+.goal { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 700;
+  color: var(--ink-2); padding: 7px 11px; border-radius: 999px;
+  background: rgba(255,255,255,.06); border: 1px solid var(--stroke); }
+.goal i { font-style: normal; font-size: 11px; font-weight: 800; min-width: 18px; height: 18px;
+  display: inline-grid; place-items: center; border-radius: 999px; padding: 0 4px;
+  background: rgba(255,255,255,.1); color: var(--ink-3); }
+.goal.ok { border-color: rgba(130,240,120,.4); background: rgba(130,240,120,.09); color: var(--ink); }
+.goal.ok i { background: linear-gradient(120deg, var(--lime), #52e08a); color: #08300f; }
+
+.phase-row.current { border-color: rgba(65,230,255,.45); box-shadow: 0 0 24px -8px rgba(65,230,255,.35); }
+.phase-head { display: flex; align-items: center; gap: 9px; font-size: 14px; flex-wrap: wrap; }
+.phase-weeks { font-size: 11px; color: var(--ink-3); font-weight: 700; }
+.phase-now { font-size: 9.5px; font-weight: 800; letter-spacing: .1em; color: var(--lime);
+  background: rgba(185,246,90,.12); border: 1px solid rgba(185,246,90,.4); padding: 3px 8px; border-radius: 999px; }
+.phase-desc { font-size: 13px; color: var(--ink-2); line-height: 1.5; margin-top: 8px; }
+
+/* ---------- Hábitos ---------- */
+.habit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.habit-chip { display: flex; align-items: center; gap: 9px; padding: 11px 12px; border-radius: 14px;
+  text-align: left; background: rgba(255,255,255,.055); border: 1px solid var(--stroke);
+  transition: all .2s cubic-bezier(.2,.8,.3,1.2); }
+.habit-chip:active { transform: scale(.94); }
+.habit-chip .h-ico { font-size: 17px; flex-shrink: 0; }
+.habit-chip .h-name { flex: 1; font-size: 12px; font-weight: 700; color: var(--ink-2); line-height: 1.3; }
+.habit-chip .h-check { width: 20px; height: 20px; border-radius: 999px; display: grid; place-items: center;
+  font-size: 11px; font-weight: 800; background: rgba(255,255,255,.08); color: transparent; flex-shrink: 0;
+  transition: all .2s; }
+.habit-chip.on { background: linear-gradient(120deg, rgba(65,230,255,.16), rgba(124,155,255,.08));
+  border-color: rgba(65,230,255,.45); }
+.habit-chip.on .h-name { color: var(--ink); }
+.habit-chip.on .h-check { background: linear-gradient(120deg, var(--lime), #52e08a); color: #08300f;
+  box-shadow: 0 2px 10px -2px rgba(130,240,120,.6); }
+.habit-foot { display: flex; justify-content: space-between; margin-top: 13px; font-size: 12.5px;
+  color: var(--ink-3); font-weight: 600; }
+.habit-foot strong { color: var(--ink); font-family: var(--font-display); font-size: 13px; }
+
+.habit-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; padding: 6px 2px 2px; }
+.hw-day { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.hw-bar { width: 100%; max-width: 34px; height: 64px; border-radius: 9px; overflow: hidden;
+  background: rgba(255,255,255,.05); display: flex; align-items: flex-end; }
+.hw-bar i { display: block; width: 100%; border-radius: 9px 9px 0 0;
+  background: linear-gradient(180deg, var(--cyan), #2a7fd4); transition: height .5s cubic-bezier(.2,.8,.3,1); }
+.hw-day.today .hw-bar { outline: 1px solid var(--stroke-bright); }
+.hw-dow { font-size: 10px; font-weight: 800; text-transform: uppercase; color: var(--ink-3); }
+.hw-n { font-size: 10.5px; font-weight: 800; color: var(--ink-2); min-height: 14px; }
+.habit-counts { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 12px; }
+.hc { font-size: 12px; font-weight: 800; padding: 6px 10px; border-radius: 999px;
+  background: rgba(255,255,255,.06); border: 1px solid var(--stroke); color: var(--ink-2); }
+.hc.ok { border-color: rgba(130,240,120,.4); color: var(--lime); }
 
 /* ---------- Alertas de meseta ---------- */
 .plateau { border-color: rgba(255,176,58,.36); }

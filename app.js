@@ -2,11 +2,12 @@
 // app.js — vistas, navegación e interacción de OVERLOAD
 // ============================================================
 
-import { db, uid, MUSCLES, loadAll, exportJSON, importJSON } from './db.js';
+import { db, uid, MUSCLES, HABITS, loadAll, exportJSON, importJSON } from './db.js';
 import {
   e1rm, fmtKg, exHistory, suggestFor, plateauFor, allPlateaus, detectPRs,
   sessionVolume, totalSets, todayISO, sessionsInWeek, volumeByMuscle,
   weeklyVolumes, streakWeeks, weekStart,
+  PLAN_PHASES, planWeek, planPhase, planGoals, habitLast7, habitStreak,
 } from './engine.js';
 import { lineChart, hBars, vBars } from './charts.js';
 
@@ -15,7 +16,7 @@ const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-const state = { exercises: [], routines: [], sessions: [], settings: {}, active: null };
+const state = { exercises: [], routines: [], sessions: [], settings: {}, active: null, habitLogs: {}, plan: null };
 let currentView = 'home';
 
 const exById = (id) => state.exercises.find((e) => e.id === id);
@@ -96,6 +97,12 @@ function renderHome(el) {
       </div>
     </section>
 
+    <h2 class="section-title">Mi plan de regreso</h2>
+    ${planCardHTML()}
+
+    <h2 class="section-title">Hábitos de hoy</h2>
+    ${habitCardHTML()}
+
     ${plateaus.length ? `
       <h2 class="section-title">⚠️ Alertas de estancamiento</h2>
       ${plateaus.slice(0, 2).map((p) => `
@@ -127,6 +134,122 @@ function renderHome(el) {
   `;
   $$('[data-routine]', el).forEach((b) =>
     b.addEventListener('click', () => startWorkout(b.dataset.routine)));
+  $$('[data-habit]', el).forEach((b) =>
+    b.addEventListener('click', () => toggleHabit(b.dataset.habit, b)));
+  $('#plan-open', el)?.addEventListener('click', planModal);
+}
+
+// ---------- Plan coach ----------
+function planCardHTML() {
+  if (!state.plan) {
+    return `
+      <button class="card card-press plan-card plan-cta" id="plan-open">
+        <span class="plan-ico">🧭</span>
+        <span class="plan-info">
+          <span class="plan-title">Comenzar mi plan de regreso</span>
+          <span class="plan-sub">3 fases guiadas: readaptación con rodilla protegida → reconstrucción → hipertrofia.</span>
+        </span>
+        <span class="routine-go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
+      </button>`;
+  }
+  const week = planWeek(state.plan.startISO);
+  const phase = planPhase(week);
+  const P = PLAN_PHASES[phase];
+  const goals = planGoals(phase, state.sessions);
+  const doneCount = goals.filter((g) => g.done).length;
+  return `
+    <button class="card card-press plan-card" id="plan-open">
+      <div class="plan-head">
+        <span class="plan-ico">${P.icon}</span>
+        <span class="plan-info">
+          <span class="plan-title">Fase ${phase} · ${P.name}</span>
+          <span class="plan-sub">Semana ${week} · objetivos ${doneCount}/${goals.length} cumplidos</span>
+        </span>
+        <span class="plan-phase-chip">${P.weeksLabel}</span>
+      </div>
+      <div class="plan-goals">
+        ${goals.map((g) => `
+          <span class="goal ${g.done ? 'ok' : ''}">
+            <i>${g.done ? '✓' : `${g.now}/${g.target}`}</i> ${g.text}
+          </span>`).join('')}
+      </div>
+    </button>`;
+}
+
+function planModal() {
+  const active = !!state.plan;
+  const week = active ? planWeek(state.plan.startISO) : 0;
+  const curPhase = active ? planPhase(week) : 0;
+  const m = openModal(`
+    <h2>🧭 Plan de regreso · 3 fases</h2>
+    <p class="m-sub">${active ? `Vas en la semana ${week}. La fase avanza sola con las semanas.` : 'Después de 7 meses fuera, la clave es progresar sin lesionarte. Así va el camino:'}</p>
+    ${[1, 2, 3].map((n) => {
+      const P = PLAN_PHASES[n];
+      return `
+      <div class="card phase-row ${curPhase === n ? 'current' : ''}" style="margin-bottom:10px;padding:15px">
+        <div class="phase-head"><span>${P.icon}</span>
+          <strong>Fase ${n} · ${P.name}</strong>
+          <span class="phase-weeks">${P.weeksLabel}</span>
+          ${curPhase === n ? '<span class="phase-now">AQUÍ VAS</span>' : ''}
+        </div>
+        <p class="phase-desc">${P.desc}</p>
+      </div>`;
+    }).join('')}
+    <p class="m-sub" style="margin-top:6px">⚠️ Viniendo de lesión en ambas rodillas: si algo duele, se cambia o se baja la carga. Idealmente valida la selección con un fisioterapeuta.</p>
+    ${active
+      ? '<button class="btn btn-danger btn-block" id="plan-reset">Reiniciar plan desde la Fase 1</button>'
+      : '<button class="btn btn-primary btn-block" id="plan-start">Comenzar hoy · Fase 1 🩹</button>'}
+  `);
+  $('#plan-start', m)?.addEventListener('click', async () => {
+    state.plan = { startISO: todayISO() };
+    await db.setKV('plan', state.plan);
+    closeModal();
+    render('home');
+    toast('Plan iniciado. Fase 1: protege la rodilla y reconecta 💪');
+  });
+  $('#plan-reset', m)?.addEventListener('click', () => {
+    confirmModal('¿Reiniciar el plan desde la Fase 1, semana 1?', async () => {
+      state.plan = { startISO: todayISO() };
+      await db.setKV('plan', state.plan);
+      closeModal();
+      render('home');
+    });
+  });
+}
+
+// ---------- Hábitos ----------
+function habitCardHTML() {
+  const today = todayISO();
+  const log = state.habitLogs[today] || {};
+  const done = HABITS.filter((h) => log[h.id]).length;
+  const streak = habitStreak(state.habitLogs);
+  return `
+    <section class="card habit-card">
+      <div class="habit-grid">
+        ${HABITS.map((h) => `
+          <button class="habit-chip ${log[h.id] ? 'on' : ''}" data-habit="${h.id}">
+            <span class="h-ico">${h.icon}</span>
+            <span class="h-name">${h.name}</span>
+            <span class="h-check">${log[h.id] ? '✓' : ''}</span>
+          </button>`).join('')}
+      </div>
+      <div class="habit-foot">
+        <span id="habit-count"><strong>${done}/${HABITS.length}</strong> hoy</span>
+        <span>🔥 <strong>${streak}</strong> ${streak === 1 ? 'día' : 'días'} de racha</span>
+      </div>
+    </section>`;
+}
+
+async function toggleHabit(id, btn) {
+  const today = todayISO();
+  const log = state.habitLogs[today] || (state.habitLogs[today] = {});
+  log[id] = !log[id];
+  await db.put('habitLogs', { id: today, done: log });
+  btn.classList.toggle('on', log[id]);
+  btn.querySelector('.h-check').textContent = log[id] ? '✓' : '';
+  const done = HABITS.filter((h) => log[h.id]).length;
+  const counter = $('#habit-count');
+  if (counter) counter.innerHTML = `<strong>${done}/${HABITS.length}</strong> hoy`;
 }
 
 // ============================== ENTRENAMIENTO ==============================
@@ -525,6 +648,25 @@ function renderProgress(el) {
         </section>
       </div>
       <div>
+        <h2 class="section-title">Hábitos · reporte semanal</h2>
+        <section class="card chart-card">
+          <div class="c-head"><div><div class="c-title">Últimos 7 días</div><div class="c-sub">Cumplimiento diario y por hábito · 🔥 ${habitStreak(state.habitLogs)} días de racha</div></div></div>
+          <div class="habit-week">
+            ${habitLast7(state.habitLogs, HABITS.length).map((d) => `
+              <div class="hw-day ${d.date === todayISO() ? 'today' : ''}" title="${d.done}/${HABITS.length}">
+                <div class="hw-bar"><i style="height:${Math.round(d.pct * 100)}%"></i></div>
+                <span class="hw-dow">${d.dow}</span>
+                <span class="hw-n">${d.done || ''}</span>
+              </div>`).join('')}
+          </div>
+          <div class="habit-counts">
+            ${HABITS.map((h) => {
+              const n = habitLast7(state.habitLogs, HABITS.length).filter((d) => (state.habitLogs[d.date] || {})[h.id]).length;
+              return `<span class="hc ${n >= 5 ? 'ok' : ''}">${h.icon} ${n}/7</span>`;
+            }).join('')}
+          </div>
+        </section>
+
         <h2 class="section-title">Volumen por músculo</h2>
         <section class="card chart-card">
           <div class="c-head"><div><div class="c-title">Últimos 7 días</div><div class="c-sub">¿Algún grupo abandonado?</div></div></div>

@@ -1,8 +1,9 @@
-const CACHE = 'overload-v4';
+const CACHE = 'overload-v7';
 const SHELL = [
   './',
   './index.html',
   './styles.css',
+  './bg-aurora.jpg',
   './app.js',
   './db.js',
   './engine.js',

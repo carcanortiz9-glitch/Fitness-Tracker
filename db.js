@@ -3,8 +3,8 @@
 // ============================================================
 
 const DB_NAME = 'overload';
-const DB_VERSION = 1;
-const STORES = ['exercises', 'routines', 'sessions', 'kv'];
+const DB_VERSION = 2; // v2: + habitLogs
+const STORES = ['exercises', 'routines', 'sessions', 'kv', 'habitLogs'];
 
 let _db = null;
 
@@ -58,14 +58,26 @@ export const uid = () =>
 
 // ---------- Grupos musculares ----------
 export const MUSCLES = {
-  pecho:    { name: 'Pecho',    color: '#189ec2' },
-  espalda:  { name: 'Espalda',  color: '#c67d1d' },
-  pierna:   { name: 'Pierna',   color: '#d84f86' },
-  hombros:  { name: 'Hombros',  color: '#63ab35' },
-  biceps:   { name: 'Bíceps',   color: '#189ec2' },
-  triceps:  { name: 'Tríceps',  color: '#c67d1d' },
-  core:     { name: 'Core',     color: '#d84f86' },
+  pecho:     { name: 'Pecho',     color: '#189ec2' },
+  espalda:   { name: 'Espalda',   color: '#c67d1d' },
+  pierna:    { name: 'Pierna',    color: '#d84f86' },
+  hombros:   { name: 'Hombros',   color: '#63ab35' },
+  biceps:    { name: 'Bíceps',    color: '#189ec2' },
+  triceps:   { name: 'Tríceps',   color: '#c67d1d' },
+  antebrazo: { name: 'Antebrazo', color: '#63ab35' },
+  core:      { name: 'Core',      color: '#d84f86' },
 };
+
+// ---------- Hábitos diarios (incluye checklist de alimentación) ----------
+// Se registran por día en el store habitLogs: { id: 'YYYY-MM-DD', done: {habitId: true} }
+export const HABITS = [
+  { id: 'sueno',     name: 'Dormir 7–8 h',                    icon: '😴', group: 'recuperación' },
+  { id: 'agua',      name: '2 L de agua',                      icon: '💧', group: 'alimentación' },
+  { id: 'proteina',  name: 'Proteína en cada comida',          icon: '🍗', group: 'alimentación' },
+  { id: 'limpio',    name: 'Sin chatarra ni azúcar',           icon: '🥗', group: 'alimentación' },
+  { id: 'estirar',   name: 'Movilidad / estiramientos 10 min', icon: '🧘', group: 'recuperación' },
+  { id: 'pasos',     name: 'Caminata (7,000+ pasos)',          icon: '👟', group: 'actividad' },
+];
 
 // ---------- Biblioteca semilla de ejercicios ----------
 // rest en segundos · increment en kg · rango de reps objetivo
@@ -144,9 +156,43 @@ export const SEED_EXERCISES = [
   E('ex-giro-ruso', 'Giro ruso (russian twist)', 'core', 60, 2.5, 12, 20),
   E('ex-plancha-lateral', 'Plancha lateral (segundos)', 'core', 60, 0, 20, 45),
   E('ex-rodillas-colgado', 'Elevación de rodillas colgado', 'core', 75, 0, 8, 15),
+
+  // --- Rehab de rodilla · bajo impacto, enfoque cuádriceps ---
+  // Estándar de fisioterapia; progresar solo sin dolor.
+  E('ex-iso-cuadriceps', 'Isométrico de cuádriceps (segundos)', 'pierna', 45, 0, 20, 45),
+  E('ex-elev-pierna-recta', 'Elevación de pierna recta', 'pierna', 60, 0, 10, 15),
+  E('ex-ext-sentado', 'Extensión de rodilla sentado (sin peso)', 'pierna', 45, 0, 12, 20),
+  E('ex-tke-banda', 'Extensión terminal de rodilla con banda (TKE)', 'pierna', 60, 0, 12, 20),
+  E('ex-sent-caja', 'Sentadilla parcial a caja', 'pierna', 90, 2.5, 8, 12),
+  E('ex-wall-sit', 'Wall sit / sentadilla en pared (segundos)', 'pierna', 75, 0, 20, 45),
+  E('ex-step-up-bajo', 'Step-up bajo (escalón chico)', 'pierna', 75, 0, 10, 15),
+  E('ex-bici-suave', 'Bici estática suave (minutos)', 'pierna', 60, 0, 10, 20),
+
+  // --- Antebrazo y agarre ---
+  E('ex-curl-muneca', 'Curl de muñeca', 'antebrazo', 60, 1.25, 12, 20),
+  E('ex-curl-muneca-inv', 'Curl de muñeca invertido', 'antebrazo', 60, 1.25, 12, 20),
+  E('ex-curl-inverso-barra', 'Curl inverso con barra', 'antebrazo', 75, 1.25, 10, 15),
+  E('ex-farmer-walk', "Farmer's walk (segundos)", 'antebrazo', 90, 2.5, 30, 60),
+  E('ex-dead-hang', 'Dead hang / colgarse de la barra (segundos)', 'antebrazo', 90, 0, 20, 45),
 ];
 
+// Rutina de readaptación: bajo impacto, cuádriceps protegido.
+// Es también semilla nueva (v2) que se agrega a instalaciones existentes.
+export const REHAB_ROUTINE = {
+  id: 'rt-rehab', name: 'Rehab Rodilla · Bajo impacto', emoji: '🩹',
+  items: [
+    { exerciseId: 'ex-bici-suave', sets: 1 },
+    { exerciseId: 'ex-iso-cuadriceps', sets: 3 },
+    { exerciseId: 'ex-elev-pierna-recta', sets: 3 },
+    { exerciseId: 'ex-tke-banda', sets: 3 },
+    { exerciseId: 'ex-sent-caja', sets: 3 },
+    { exerciseId: 'ex-hip-thrust', sets: 3 },
+    { exerciseId: 'ex-wall-sit', sets: 2 },
+  ],
+};
+
 export const SEED_ROUTINES = [
+  REHAB_ROUTINE,
   {
     id: 'rt-push', name: 'Push · Empuje', emoji: '🔥',
     items: [
@@ -180,8 +226,9 @@ export const SEED_ROUTINES = [
 ];
 
 export async function loadAll() {
-  let [exercises, routines, sessions, settings] = await Promise.all([
+  let [exercises, routines, sessions, settings, habitLogs, plan] = await Promise.all([
     db.all('exercises'), db.all('routines'), db.all('sessions'), db.getKV('settings'),
+    db.all('habitLogs'), db.getKV('plan'),
   ]);
   const seeded = await db.getKV('seeded');
   if (!seeded) {
@@ -201,10 +248,22 @@ export async function loadAll() {
       await Promise.all(missing.map((e) => db.put('exercises', e)));
       exercises = exercises.concat(missing);
     }
+    // Rutinas semilla nuevas se agregan UNA sola vez por versión: si el
+    // usuario la borra después, no debe resucitar en el siguiente arranque.
+    const seedVersion = (await db.getKV('seedVersion')) || 1;
+    if (seedVersion < 2) {
+      if (!routines.some((r) => r.id === REHAB_ROUTINE.id)) {
+        await db.put('routines', REHAB_ROUTINE);
+        routines.push(REHAB_ROUTINE);
+      }
+      await db.setKV('seedVersion', 2);
+    }
   }
   sessions.sort((a, b) => a.date.localeCompare(b.date));
   return {
     exercises, routines, sessions,
+    habitLogs: Object.fromEntries(habitLogs.map((h) => [h.id, h.done || {}])),
+    plan: plan || null,
     settings: Object.assign({ defaultRest: 90, sound: true, vibrate: true }, settings || {}),
   };
 }
@@ -212,9 +271,11 @@ export async function loadAll() {
 // ---------- Respaldo ----------
 export async function exportJSON(state) {
   const payload = {
-    app: 'OVERLOAD', version: 1, exportedAt: new Date().toISOString(),
+    app: 'OVERLOAD', version: 2, exportedAt: new Date().toISOString(),
     exercises: state.exercises, routines: state.routines,
     sessions: state.sessions, settings: state.settings,
+    habitLogs: Object.entries(state.habitLogs || {}).map(([id, done]) => ({ id, done })),
+    plan: state.plan || null,
   };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
@@ -230,12 +291,14 @@ export async function importJSON(file) {
   if (data.app !== 'OVERLOAD' || !Array.isArray(data.sessions)) {
     throw new Error('El archivo no es un respaldo válido de OVERLOAD');
   }
-  await Promise.all(STORES.slice(0, 3).map((s) => db.clear(s)));
+  await Promise.all([...STORES.slice(0, 3), 'habitLogs'].map((s) => db.clear(s)));
   await Promise.all([
     ...data.exercises.map((e) => db.put('exercises', e)),
     ...data.routines.map((r) => db.put('routines', r)),
     ...data.sessions.map((s) => db.put('sessions', s)),
+    ...(data.habitLogs || []).map((h) => db.put('habitLogs', h)),
     db.setKV('settings', data.settings || {}),
+    data.plan ? db.setKV('plan', data.plan) : db.delKV('plan'),
     db.setKV('seeded', true),
   ]);
 }

@@ -36,10 +36,18 @@ export function exHistory(sessions, exId) {
 // Regla de doble progresión: llena el rango de reps con un peso;
 // cuando todas las series tocan el techo del rango, sube el peso.
 export function suggestFor(ex, hist) {
+  // Ejercicios por tiempo (isométricos, bici, planchas): las "reps" son
+  // segundos o minutos y el consejo cambia de tono.
+  const timeUnit = /\(segundos\)/i.test(ex.name) ? 'seg'
+    : /\(minutos\)/i.test(ex.name) ? 'min' : null;
+  const unit = timeUnit || 'reps';
+
   if (!hist.length) {
     return {
       type: 'start', icon: '🎯',
-      text: `Primera vez. Encuentra un peso con el que logres <strong>${ex.repMin}–${ex.repMax} reps</strong> dejando 1–2 en reserva.`,
+      text: timeUnit
+        ? `Primera vez. Registra tu base: apunta a <strong>${ex.repMin}–${ex.repMax} ${unit}</strong> con control y sin dolor.`
+        : `Primera vez. Encuentra un peso con el que logres <strong>${ex.repMin}–${ex.repMax} reps</strong> dejando 1–2 en reserva.`,
     };
   }
   const last = hist[hist.length - 1];
@@ -50,14 +58,17 @@ export function suggestFor(ex, hist) {
   if (allAtCeiling && inc > 0) {
     return {
       type: 'weight', icon: '📈',
-      text: `Llenaste el rango con ${fmtKg(last.topW)} kg. Hoy sube a <strong>${fmtKg(last.topW + inc)} kg</strong> (aunque bajen las reps, es progreso).`,
+      text: `Llenaste el rango con ${fmtKg(last.topW)} kg. Hoy sube a <strong>${fmtKg(last.topW + inc)} kg</strong> (aunque bajen las ${unit}, es progreso).`,
       targetW: last.topW + inc,
     };
   }
   const worst = Math.min(...topSets.map((s) => s.r));
+  const goal = Math.min(worst + 1, ex.repMax);
   return {
     type: 'reps', icon: '➕',
-    text: `Con <strong>${fmtKg(last.topW)} kg</strong>, busca al menos <strong>${Math.min(worst + 1, ex.repMax)} reps</strong> por serie (techo: ${ex.repMax}).`,
+    text: timeUnit
+      ? `Busca al menos <strong>${goal} ${unit}</strong> por serie (techo: ${ex.repMax} ${unit}), siempre sin dolor.`
+      : `Con <strong>${fmtKg(last.topW)} kg</strong>, busca al menos <strong>${goal} reps</strong> por serie (techo: ${ex.repMax}).`,
     targetW: last.topW,
   };
 }
@@ -176,6 +187,77 @@ export function weeklyVolumes(sessions, weeks = 8) {
     out.push({ week: ws, vol });
   }
   return out;
+}
+
+// ---------- Plan coach de regreso (3 fases) ----------
+export const PLAN_PHASES = {
+  1: {
+    name: 'Readaptación', icon: '🩹', weeksLabel: 'Semanas 1–4',
+    desc: 'Reconecta técnica y protege las rodillas. Cargas ligeras (50–60 % de lo que recuerdas), 2–3 días por semana. Regla de oro: nada debe doler.',
+  },
+  2: {
+    name: 'Reconstrucción', icon: '🧱', weeksLabel: 'Semanas 5–8',
+    desc: 'Sube volumen y frecuencia a 3–4 días. Reintroduce patrones de pierna con carga (goblet → barra) solo si la rodilla responde bien.',
+  },
+  3: {
+    name: 'Hipertrofia', icon: '🚀', weeksLabel: 'Semana 9+',
+    desc: 'Modo completo: doble progresión. El motor te dice cuándo subir peso o reps — hazle caso a las alertas de meseta.',
+  },
+};
+
+export function planWeek(startISO, ref = todayISO()) {
+  return Math.max(1, Math.floor((weekStartDate(ref) - weekStartDate(startISO)) / (7 * 86400000)) + 1);
+}
+function weekStartDate(iso) {
+  const [y, m, d] = weekStart(iso).split('-').map(Number);
+  return new Date(y, m - 1, d).getTime();
+}
+export const planPhase = (week) => (week <= 4 ? 1 : week <= 8 ? 2 : 3);
+
+// Objetivos de la semana en curso, evaluados contra las sesiones reales
+export function planGoals(phase, sessions, ref = todayISO()) {
+  const week = sessionsInWeek(sessions, ref);
+  const rehab = week.filter((s) => s.routineId === 'rt-rehab').length;
+  const target = phase === 1 ? 2 : 3;
+  const goals = [
+    { text: `${target}+ sesiones esta semana`, now: week.length, target, done: week.length >= target },
+  ];
+  if (phase <= 2) {
+    goals.push({ text: 'Sesión de Rehab Rodilla', now: rehab, target: 1, done: rehab >= 1 });
+  }
+  if (phase === 3) {
+    const prs = week.reduce((m, s) => m + (s.prs || 0), 0);
+    goals.push({ text: 'Lograr 1+ PR en la semana', now: prs, target: 1, done: prs >= 1 });
+  }
+  return goals;
+}
+
+// ---------- Hábitos ----------
+export function habitLast7(habitLogs, totalHabits, ref = todayISO()) {
+  const out = [];
+  const [y, m, d] = ref.split('-').map(Number);
+  for (let i = 6; i >= 0; i--) {
+    const dt = new Date(y, m - 1, d - i);
+    const iso = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+    const done = Object.values(habitLogs[iso] || {}).filter(Boolean).length;
+    out.push({ date: iso, dow: dt.toLocaleDateString('es-MX', { weekday: 'narrow' }), done, pct: totalHabits ? done / totalHabits : 0 });
+  }
+  return out;
+}
+
+// Racha de días "cumplidos" (4+ hábitos). Hoy no rompe la racha si aún va a medias.
+export function habitStreak(habitLogs, minCount = 4, ref = todayISO()) {
+  const [y, m, d] = ref.split('-').map(Number);
+  let streak = 0;
+  const doneOn = (iso) => Object.values(habitLogs[iso] || {}).filter(Boolean).length >= minCount;
+  if (doneOn(ref)) streak++;
+  for (let i = 1; i < 400; i++) {
+    const dt = new Date(y, m - 1, d - i);
+    const iso = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+    if (doneOn(iso)) streak++;
+    else break;
+  }
+  return streak;
 }
 
 // Racha: semanas consecutivas (terminando en esta o la pasada) con ≥1 sesión
