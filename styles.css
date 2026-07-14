@@ -518,6 +518,14 @@ input, select { font-family: inherit; color: inherit; }
   font-size: 13px; font-weight: 700; background: rgba(255,199,83,.1); border: 1px solid rgba(255,199,83,.35); }
 .pr-item .pr-what { color: var(--amber); }
 
+/* ---------- Cuenta / sincronización ---------- */
+.acct-row { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 13px;
+  background: rgba(255,255,255,.06); border: 1px solid var(--stroke); }
+.acct-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--ink-3); flex-shrink: 0; }
+.acct-dot.on { background: var(--good); box-shadow: 0 0 8px var(--good); }
+.acct-mail { flex: 1; font-size: 13px; font-weight: 700; color: var(--ink-2);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 /* ---------- Toast ---------- */
 .toast { position: fixed; z-index: 100; left: 50%; transform: translateX(-50%);
   bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 16px);

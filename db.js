@@ -35,22 +35,36 @@ function tx(store, mode, fn) {
   }));
 }
 
+// Ganchos que sync.js instala al iniciar sesión: cada escritura local se
+// refleja en la nube. Las variantes *Local NO disparan ganchos — las usa
+// sync.js para aplicar cambios remotos sin crear un eco infinito.
+export const cloudHooks = { put: null, del: null, setKV: null, delKV: null };
+
+const _put = (store, obj) => tx(store, 'readwrite', (s) => s.put(obj));
+const _del = (store, id) => tx(store, 'readwrite', (s) => s.delete(id));
+const _setKV = (key, value) => tx('kv', 'readwrite', (s) => s.put({ key, value }));
+const _delKV = (key) => tx('kv', 'readwrite', (s) => s.delete(key));
+
 export const db = {
   all: (store) => open().then((d) => new Promise((res, rej) => {
     const r = d.transaction(store).objectStore(store).getAll();
     r.onsuccess = () => res(r.result);
     r.onerror = () => rej(r.error);
   })),
-  put: (store, obj) => tx(store, 'readwrite', (s) => s.put(obj)),
-  del: (store, id) => tx(store, 'readwrite', (s) => s.delete(id)),
+  put: (store, obj) => _put(store, obj).then((r) => { cloudHooks.put?.(store, obj); return r; }),
+  del: (store, id) => _del(store, id).then((r) => { cloudHooks.del?.(store, id); return r; }),
+  putLocal: _put,
+  delLocal: _del,
   clear: (store) => tx(store, 'readwrite', (s) => s.clear()),
   getKV: (key) => open().then((d) => new Promise((res, rej) => {
     const r = d.transaction('kv').objectStore('kv').get(key);
     r.onsuccess = () => res(r.result ? r.result.value : undefined);
     r.onerror = () => rej(r.error);
   })),
-  setKV: (key, value) => tx('kv', 'readwrite', (s) => s.put({ key, value })),
-  delKV: (key) => tx('kv', 'readwrite', (s) => s.delete(key)),
+  setKV: (key, value) => _setKV(key, value).then((r) => { cloudHooks.setKV?.(key, value); return r; }),
+  delKV: (key) => _delKV(key).then((r) => { cloudHooks.delKV?.(key); return r; }),
+  setKVLocal: _setKV,
+  delKVLocal: _delKV,
 };
 
 export const uid = () =>

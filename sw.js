@@ -1,4 +1,4 @@
-const CACHE = 'overload-v8';
+const CACHE = 'overload-v9';
 const SHELL = [
   './',
   './index.html',
@@ -34,7 +34,8 @@ self.addEventListener('fetch', (e) => {
   e.respondWith(
     fetch(e.request).then((res) => {
       const url = new URL(e.request.url);
-      const cacheable = url.origin === location.origin || url.hostname.includes('fonts.g');
+      const cacheable = url.origin === location.origin || url.hostname.includes('fonts.g')
+        || url.hostname === 'www.gstatic.com'; // SDK de Firebase disponible offline
       if (res.ok && cacheable) {
         const copy = res.clone();
         caches.open(CACHE).then((c) => c.put(e.request, copy));

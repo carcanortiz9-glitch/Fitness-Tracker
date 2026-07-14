@@ -10,6 +10,7 @@ import {
   PLAN_PHASES, planWeek, planPhase, planGoals, habitLast7, habitStreak,
 } from './engine.js';
 import { lineChart, hBars, vBars } from './charts.js';
+import { sync, initFirebase, signIn, signOutUser, cloudWipe } from './sync.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
@@ -35,6 +36,21 @@ const CHECK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" st
   if (state.active) {
     toast('Tienes un entrenamiento sin terminar — tócalo en «Entrenar»');
   }
+
+  // Nube (opcional): si hay sesión, sincroniza; si no, todo sigue local.
+  sync.onRemote = async () => {
+    Object.assign(state, await loadAll());
+    render(currentView);
+  };
+  sync.onStatus = (s, detail) => {
+    if (s === 'on') toast('☁️ Sincronización activa');
+    else if (s === 'error') {
+      toast(detail === 'permission-denied'
+        ? '⚠️ Nube: faltan las reglas de Firestore (ver Ajustes)'
+        : '⚠️ Nube: ' + (detail || 'error'));
+    }
+  };
+  initFirebase();
 })();
 
 function bindNav() {
@@ -1083,7 +1099,16 @@ function settingsModal() {
   const s = state.settings;
   const m = openModal(`
     <h2>Ajustes</h2>
-    <p class="m-sub">Tus datos viven solo en este dispositivo. Haz respaldos.</p>
+    <p class="m-sub">${sync.user ? 'Sincronizando con la nube: teléfono y computadora comparten datos.' : 'Entra con Google para que tus datos se sincronicen entre dispositivos.'}</p>
+    <div class="field"><label>Cuenta y sincronización</label>
+      ${sync.user
+        ? `<div class="acct-row"><span class="acct-dot on"></span>
+             <span class="acct-mail">${esc(sync.user.email || 'Conectado')}</span>
+             <button class="btn btn-ghost btn-sm" id="acct-out">Salir</button></div>`
+        : sync.status === 'offline-sdk'
+          ? '<div class="acct-row"><span class="acct-dot"></span><span class="acct-mail">Sin conexión — la nube se activará con internet</span></div>'
+          : '<button class="btn btn-primary btn-block" id="acct-in">☁️ Entrar con Google</button>'}
+    </div>
     <div class="field"><label>Descanso por defecto</label>
       <select id="set-rest">
         ${[60, 90, 120, 150, 180].map((v) => `<option value="${v}" ${s.defaultRest === v ? 'selected' : ''}>${v} segundos</option>`).join('')}
@@ -1108,6 +1133,19 @@ function settingsModal() {
     await db.setKV('settings', s);
   };
   ['set-rest', 'set-sound', 'set-vib'].forEach((id) => $('#' + id, m).addEventListener('change', persist));
+  $('#acct-in', m)?.addEventListener('click', async () => {
+    try { await signIn(); closeModal(); }
+    catch (e) {
+      toast(e.code === 'auth/unauthorized-domain'
+        ? '⚠️ Agrega este dominio en Firebase → Authentication → Dominios autorizados'
+        : '⚠️ No se pudo iniciar sesión: ' + (e.code || e.message));
+    }
+  });
+  $('#acct-out', m)?.addEventListener('click', async () => {
+    await signOutUser();
+    closeModal();
+    toast('Sesión cerrada — la app sigue funcionando local');
+  });
   $('#set-export', m).addEventListener('click', () => exportJSON(state));
   $('#set-import', m).addEventListener('click', () => $('#set-file', m).click());
   $('#set-file', m).addEventListener('change', async (e) => {
@@ -1124,9 +1162,12 @@ function settingsModal() {
     }
   });
   $('#set-wipe', m).addEventListener('click', () => {
-    confirmModal('Esto borra TODAS tus sesiones, rutinas y ejercicios personalizados. ¿Seguro? Considera exportar antes.', async () => {
-      await Promise.all([db.clear('sessions'), db.clear('routines'), db.clear('exercises'), db.delKV('seeded'), db.delKV('activeWorkout')]);
-      state.active = null;
+    const extra = sync.user ? ' Se borrarán también de la nube.' : '';
+    confirmModal('Esto borra TODAS tus sesiones, rutinas, hábitos y ejercicios personalizados.' + extra + ' ¿Seguro? Considera exportar antes.', async () => {
+      if (sync.user) await cloudWipe().catch(() => {});
+      await Promise.all([db.clear('sessions'), db.clear('routines'), db.clear('exercises'), db.clear('habitLogs'),
+        db.delKV('seeded'), db.delKV('seedVersion'), db.delKV('activeWorkout'), db.delKVLocal('plan')]);
+      state.active = null; state.plan = null;
       Object.assign(state, await loadAll());
       closeModal();
       render('home');
